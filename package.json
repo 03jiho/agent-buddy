@@ -13,6 +13,7 @@
     "test": "node --test",
     "settings": "node tools/print-settings.mjs",
     "icon": "node tools/make-tray-icon.mjs",
+    "plugin-icon": "electron tools/make-plugin-icon.cjs",
     "electron": "electron electron/main.cjs",
     "overlay": "electron electron/main.cjs"
   },
