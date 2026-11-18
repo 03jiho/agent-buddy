@@ -21,8 +21,8 @@ Claude가 코드를 읽으면 안경을 고쳐 쓰고, 파일을 고치면 메�
 - **📋 마우스를 올리면 오늘의 업무 일지**: 프로젝트, 도구 호출 수, 실수한 횟수, 쓴 토큰, 그리고 마신 커피 잔 수(출력 5천 토큰당 한 잔).
 - **📏 크기는 마음대로**: 트레이 아이콘에서 작게·보통·크게를 고를 수 있어요.
 - **👻 방해하지 않아요**: 캐릭터를 뺀 나머지 영역은 클릭이 그대로 Claude로 넘어가요. "애니메이션 줄이기" 설정도 따라요.
-- **🔒 대화 내용은 몰라요**: 이벤트 이름만 받고, 내 컴퓨터 밖으로는 아무것도 보내지 않아요.
-- **🆓 무료, 오픈소스.**
+- **🔒 대화 내용은 몰라요**: 무슨 종류의 일을 하는지(이벤트·도구 이름)만 받고, 내 컴퓨터 밖으로는 아무것도 보내지 않아요.
+- **🆓 무료.** 코드는 MIT 오픈소스예요.
 
 ## 업무 모션
 
@@ -41,23 +41,11 @@ Claude가 코드를 읽으면 안경을 고쳐 쓰고, 파일을 고치면 메�
 | 작업 완료 | 만세 + 색종이 (도구 10번 이상 쓰면 더 크게) |
 | 한동안 조용함 | 꾸벅꾸벅 |
 
-## 구조
-
-```
-Claude Code 훅 (hook.mjs)
-   │  POST /event  (이벤트명·도구명·프로젝트 폴더명만)
-   ▼
-로컬 서버 (server.mjs, 127.0.0.1:47821)  ── 상태 머신(lib/state.mjs) + 토큰 집계(lib/transcript.mjs)
-   │  SSE /stream
-   ▼
-오버레이 (overlay/index.html)
-   ├─ Electron 투명창 (electron/main.cjs) — Claude 창 하단에 붙음
-   └─ 또는 아무 브라우저 탭
-```
-
 ## 설치 (Claude Code 플러그인, 추천)
 
-Windows, Node 20 이상. Claude Code 입력창에 한 줄:
+필요한 것: **Windows**, **Claude 데스크톱 앱**, **Node.js 20 이상**(`node`, `npm`이 PATH에 있어야 해요).
+
+Claude Code 입력창에 한 줄:
 
 ```
 /plugin install agent-buddy --marketplace 03jiho/agent-buddy
@@ -72,6 +60,13 @@ Windows, Node 20 이상. Claude Code 입력창에 한 줄:
 - Node 24의 Electron 설치 버그도 자동으로 우회합니다.
 - 자동 실행을 끄려면 환경변수 `AGENT_BUDDY_AUTOSTART=0`.
 - 예전에 수동으로 `settings.json`에 훅을 넣었다면 지워주세요. 남겨두면 이벤트가 두 번씩 들어옵니다.
+- 터미널에서 Claude Code(CLI)를 쓰면 따라갈 Claude 창이 없어서 오버레이가 안 보여요. 환경변수 `AGENT_BUDDY_TARGET=WindowsTerminal`처럼 터미널 프로세스 이름을 지정하면 터미널 창 아래에 붙어요.
+
+### 끄기·지우기
+
+- **잠깐 끄기**: 작업 표시줄 트레이 아이콘 → 종료. 다음 세션을 시작하면 다시 출근합니다.
+- **자동 실행 끄기**: 환경변수 `AGENT_BUDDY_AUTOSTART=0`.
+- **완전히 지우기**: `/plugin uninstall agent-buddy@agent-buddy`. 받아둔 Electron도 플러그인 폴더와 함께 지워집니다.
 
 ## 수동 설치
 
@@ -101,21 +96,15 @@ node tools/print-settings.mjs
 출력된 JSON의 `hooks`를 `~/.claude/settings.json`의 `hooks`에 **병합**합니다. 기존 설정은 지우지 말고, 먼저 백업해두세요.
 도구는 파일을 직접 고치지 않습니다. 훅 경로는 `C:/...`처럼 슬래시여야 합니다(Git Bash가 역슬래시를 먹어서 훅이 조용히 안 돌 수 있음). 출력은 이미 슬래시로 나옵니다.
 
-### 2. 서버 실행 (터미널 하나 켜두기)
-
-```bash
-node server.mjs
-```
-
-### 3. 오버레이 실행
+### 2. 오버레이 실행
 
 ```bash
 npm run overlay
 ```
 
-서버가 이미 떠 있으면 거기에 붙고, 없으면 자체로 띄웁니다. 종료는 트레이 아이콘 → 종료.
+오버레이가 서버까지 같이 띄웁니다. 종료는 트레이 아이콘 → 종료. 오버레이 없이 서버만 쓰고 싶으면 `node server.mjs`.
 
-### 4. Claude Code 재시작
+### 3. Claude Code 재시작
 
 재시작해야 훅이 적용됩니다. 아무 작업이나 시키면 캐릭터가 반응합니다.
 
@@ -143,9 +132,24 @@ Electron 없이 보고 싶으면 브라우저로 http://127.0.0.1:47821/?bg=1 �
 
 ## 문제 해결
 
-- **캐릭터가 안 움직임**: 서버가 떠 있는지 http://127.0.0.1:47821/health 로 확인 → 이벤트가 들어오는지 `/events/recent` 확인 → Claude Code에서 `/hooks`로 등록 확인 → `claude --debug-file log.txt`로 훅 실행 로그 확인.
-- **훅은 등록됐는데 이벤트가 없음**: 훅 command 경로에 역슬래시가 있는지 확인.
-- **오버레이가 안 보임**: Claude 창이 맨 앞에 있어야 보입니다. 다른 창을 클릭하면 숨는 게 정상입니다.
+- **오버레이가 안 보임**: Claude 창이 맨 앞에 있어야 보입니다. 다른 창을 클릭하면 숨는 게 정상입니다. 처음 설치했다면 `%TEMP%\agent-buddy-launch.log`에서 설치가 어디서 멈췄는지 확인하세요.
+- **캐릭터가 안 움직임**: 서버가 떠 있는지 http://127.0.0.1:47821/health 로 확인 → 이벤트가 들어오는지 `/events/recent` 확인 → Claude Code에서 `/hooks`로 훅 등록 확인 → `claude --debug-file log.txt`로 훅 실행 로그 확인.
+- **예전 화면이 그대로임**: 트레이 아이콘 → 다시 불러오기. 브라우저 탭으로 보고 있었다면 새로고침하세요.
+- **(수동 설치) 훅은 등록됐는데 이벤트가 없음**: `settings.json`의 훅 경로에 역슬래시가 있는지 확인하세요. `C:/...`처럼 슬래시여야 합니다.
+
+## 구조
+
+```
+Claude Code 훅 (hook.mjs)
+   │  POST /event  (이벤트·도구 이름, 프로젝트 폴더 이름 등. 대화 내용은 없음)
+   ▼
+로컬 서버 (server.mjs, 127.0.0.1:47821)  ── 상태 머신(lib/state.mjs) + 토큰 집계(lib/transcript.mjs)
+   │  SSE /stream
+   ▼
+오버레이 (overlay/index.html)
+   ├─ Electron 투명창 (electron/main.cjs) — Claude 창 하단에 붙음, 서버도 같이 실행
+   └─ 또는 아무 브라우저 탭
+```
 
 ## 이 플러그인이 실행·전송·다운로드하는 것
 
@@ -188,12 +192,9 @@ npm test
 
 ## 한계
 
-- Claude 창 추적은 Windows 전용입니다. PowerShell로 0.2초마다 창 위치를 읽어서, 창을 끌 때 약간 늦게 따라옵니다.
+- 오버레이는 Windows 전용입니다(macOS·Linux에서는 브라우저 탭으로만 볼 수 있어요).
+- Claude 창 위치를 0.2초마다 읽어서, 창을 끌 때 약간 늦게 따라옵니다.
 - 프로토타입입니다.
-
-## 후원
-
-Agent Buddy가 마음에 들었다면 동료에게 커피 한 잔 사주세요. 저장소 위쪽의 **Sponsor** 버튼으로 후원할 수 있어요.
 
 ## 라이선스
 
