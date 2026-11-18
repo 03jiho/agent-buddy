@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agent-buddy",
+  "description": "Claude Code와 같이 일하는 데스크톱 캐릭터",
+  "owner": {
+    "name": "03jiho",
+    "url": "https://github.com/03jiho"
+  },
+  "plugins": [
+    {
+      "name": "agent-buddy",
+      "description": "Claude Code 작업 상태에 반응하는 직장인 풍자 캐릭터 (Claude 창 하단 오버레이, Windows)",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

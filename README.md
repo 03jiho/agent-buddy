@@ -47,7 +47,25 @@ Claude Code 훅 (hook.mjs)
    └─ 또는 아무 브라우저 탭
 ```
 
-## 설치 (Windows, Node 20 이상)
+## 설치 (Claude Code 플러그인, 추천)
+
+Windows, Node 20 이상. Claude Code 입력창에 한 줄:
+
+```
+/plugin install agent-buddy --marketplace 03jiho/agent-buddy
+```
+
+(Claude Code 2.1.275 이전 버전이면 `/plugin marketplace add 03jiho/agent-buddy` 후 `/plugin install agent-buddy@agent-buddy`)
+
+설치하고 Claude Code를 다시 시작하면 끝입니다.
+
+- 훅은 플러그인이 등록합니다. `settings.json`을 고칠 필요가 없고, 끄거나 지우는 것도 `/plugin`에서 합니다.
+- 세션이 시작될 때 오버레이가 안 떠 있으면 알아서 띄웁니다. 처음 한 번은 Electron(약 100MB)을 받느라 1~2분 걸릴 수 있습니다. 진행 상황은 `%TEMP%\agent-buddy-launch.log`에 남습니다.
+- Node 24의 Electron 설치 버그도 자동으로 우회합니다.
+- 자동 실행을 끄려면 환경변수 `AGENT_BUDDY_AUTOSTART=0`.
+- 예전에 수동으로 `settings.json`에 훅을 넣었다면 지워주세요. 남겨두면 이벤트가 두 번씩 들어옵니다.
+
+## 수동 설치
 
 ```bash
 git clone https://github.com/03jiho/agent-buddy.git
@@ -113,6 +131,7 @@ Electron 없이 보고 싶으면 브라우저로 http://127.0.0.1:47821/?bg=1 �
 | `AGENT_BUDDY_PORT` | `47821` | 서버 포트 (훅·서버·오버레이 공통) |
 | `AGENT_BUDDY_BOTTOM_OFFSET` | `100` | Claude 창 하단에서 몇 px 위에 띄울지 (입력창 위) |
 | `AGENT_BUDDY_TARGET` | `claude` | 따라갈 창의 프로세스 이름 |
+| `AGENT_BUDDY_AUTOSTART` | `1` | `0`이면 플러그인이 세션 시작 때 오버레이를 띄우지 않음 |
 
 ## 문제 해결
 
