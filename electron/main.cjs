@@ -83,9 +83,30 @@ function setSize(next) {
 }
 
 // 캐릭터 위에 마우스가 있을 때만 클릭을 받고, 나머지는 아래 Claude 창으로 통과시킨다.
-ipcMain.on('buddy:clickable', (e, on) => {
-  if (win && e.sender === win.webContents) win.setIgnoreMouseEvents(!on, { forward: true });
-});
+// Windows 에서 setIgnoreMouseEvents 의 forward(마우스 이동 전달)가 안 와서, 커서 위치를 여기서 직접 본다.
+// ponytail: 40ms 폴링. 커서 판정만 하는 가벼운 작업이라 충분, 거슬리면 전역 마우스 훅으로 교체.
+let hit = null; // 페이지가 알려준 캐릭터 영역 (창 기준 CSS px)
+let dragging = false;
+let clickable = false;
+const fromPage = (e) => win && e.sender === win.webContents;
+ipcMain.on('buddy:hit', (e, r) => { if (fromPage(e)) hit = r; });
+ipcMain.on('buddy:drag', (e, on) => { if (fromPage(e)) dragging = on === true; });
+
+function setClickable(on) {
+  if (on === clickable || !win) return;
+  clickable = on;
+  if (on) win.setIgnoreMouseEvents(false); // forward 옵션을 같이 주면 Windows 에서 입력이 계속 막힘
+  else win.setIgnoreMouseEvents(true, { forward: true });
+  win.webContents.send('buddy:hover', on);
+}
+
+setInterval(() => {
+  if (!win || !hit || !win.isVisible()) return setClickable(false);
+  const p = screen.getCursorScreenPoint();
+  const b = win.getContentBounds();
+  const x = p.x - b.x, y = p.y - b.y, pad = 4;
+  setClickable(dragging || (x >= hit.x - pad && x <= hit.x + hit.w + pad && y >= hit.y - pad && y <= hit.y + hit.h + pad));
+}, 40);
 
 function followTarget() {
   const ps = spawn(
@@ -107,9 +128,13 @@ function followTarget() {
 }
 
 async function createWindow(port) {
+  // Windows 투명 창은 클릭 판정 영역이 "처음 만든 크기"에 고정된다(나중에 setBounds 로 키워도 그대로).
+  // 그래서 가장 큰 크기(가장 넓은 화면 폭 × 큰 사이즈 높이)로 만들고 줄여서만 쓴다.
+  const maxW = Math.max(...screen.getAllDisplays().map((d) => d.workArea.width));
+  const maxH = Math.max(...Object.values(SIZES).map((s) => s.h));
   win = new BrowserWindow({
-    width: 800,
-    height: SIZES[size].h,
+    width: maxW,
+    height: maxH,
     show: false, // Claude 창을 찾으면 그때 보인다
     frame: false,
     transparent: true,
@@ -119,7 +144,13 @@ async function createWindow(port) {
     skipTaskbar: true,
     hasShadow: false,
     alwaysOnTop: true,
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.cjs') },
+    webPreferences: {
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+      backgroundThrottling: false, // 가려졌다고 판단돼도 계속 그린다
+    },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setIgnoreMouseEvents(true, { forward: true }); // 클릭 통과
@@ -168,6 +199,10 @@ async function ensureServer() {
 }
 
 if (!app.requestSingleInstanceLock()) app.quit(); // 중복 실행 방지
+
+// Windows: Chromium 이 투명·최상위 창을 "가려졌다"고 오판해서 그리기를 멈춘다(visibilityState=hidden).
+// 그러면 화면엔 옛 프레임이 남고, 클릭 판정도 옛 프레임 기준이라 쓰다듬기·드래그가 안 된다.
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 
 app.whenReady().then(async () => {
   try { size = JSON.parse(fs.readFileSync(prefsFile(), 'utf8')).size; } catch {}

@@ -299,6 +299,8 @@
     bubble.style.setProperty('--tail', Math.max(10, Math.min(bw - 20, x + SIZE / 2 - bl - 4)) + 'px');
     const hw = hud.offsetWidth;
     hud.style.left = (x - hw - 8 >= 6 ? x - hw - 8 : Math.min(innerWidth - hw - 6, x + SIZE + 8)) + 'px';
+    // Electron: 이 영역 위에서만 클릭을 받도록 메인 프로세스에 알림
+    api?.setHitRect({ x, y: innerHeight - 4 - SIZE, w: SIZE, h: SIZE });
   }
   addEventListener('resize', layout);
 
@@ -312,13 +314,18 @@
 
   // 마우스: 올리면 HUD, 끌면 이동, 클릭하면 반응. 나머지 영역은 클릭 통과.
   let drag = null;
-  const setHover = (on) => { document.body.classList.toggle('hover', on); api?.setClickable(on); if (on) layout(); };
+  const setHover = (on) => { document.body.classList.toggle('hover', on); if (on) layout(); else resetRub(); };
+  // 브라우저에선 포인터 이벤트로, Electron 에선 메인 프로세스의 커서 판정으로 호버를 안다
+  // (Electron 은 클릭 통과로 돌아갈 때 pointerleave 가 안 올 수 있어서 메인 신호가 기준)
   buddy.addEventListener('pointerenter', () => setHover(true));
   buddy.addEventListener('pointerleave', () => { if (!drag) setHover(false); });
+  api?.onHover((on) => { if (!drag) setHover(on); });
+  const endDrag = () => { drag = null; buddy.classList.remove('drag'); api?.setDragging(false); };
   buddy.addEventListener('pointerdown', (e) => {
     drag = { sx: e.clientX, off: e.clientX - x, moved: false };
-    buddy.setPointerCapture(e.pointerId); buddy.classList.add('drag');
+    buddy.setPointerCapture(e.pointerId); buddy.classList.add('drag'); api?.setDragging(true);
   });
+  buddy.addEventListener('pointercancel', endDrag);
   buddy.addEventListener('pointermove', (e) => {
     if (!drag) return;
     if (Math.abs(e.clientX - drag.sx) > 3) drag.moved = true;
@@ -327,8 +334,9 @@
     layout();
   });
   buddy.addEventListener('pointerup', (e) => {
-    const d = drag; drag = null; buddy.classList.remove('drag');
-    if (d?.moved) store.set('buddy-x', ratio.toFixed(4));
+    const d = drag; endDrag();
+    if (!d) return;
+    if (d.moved) store.set('buddy-x', ratio.toFixed(4));
     else poke();
     const r = buddy.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) setHover(false);
@@ -357,7 +365,7 @@
     }
     rub.dir = dir;
   });
-  buddy.addEventListener('pointerleave', () => { rub.dir = 0; rub.lastX = null; rub.turns = []; });
+  function resetRub() { rub.dir = 0; rub.lastX = null; rub.turns = []; }
   let petTimer = null;
   function pet() {
     buddy.classList.add('petted');
