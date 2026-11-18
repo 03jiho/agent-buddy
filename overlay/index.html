@@ -19,6 +19,14 @@
   /* 어두운 배경(Claude 다크 테마)에서도 윤곽이 보이도록 옅은 외곽광 */
   .buddy svg { width:100%; height:100%; overflow:visible; filter:drop-shadow(0 0 1.2px rgba(255,255,255,.45)); }
   .buddy.poked .wrap { animation:jump .5s ease-out 1 !important; }
+  /* 쓰다듬기: 행복한 눈 + 미소 + 홍조, 몸을 살랑살랑, 하트 */
+  .buddy.petted .wrap { animation:wiggle .35s ease-in-out 3 !important; }
+  .buddy.petted .e, .buddy.petted .m { display:none !important; }
+  .buddy.petted .e-happy, .buddy.petted .m-smile, .buddy.petted .p-flush { display:inline !important; }
+  @keyframes wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-5deg)} 75%{transform:rotate(5deg)} }
+  .heart { position:absolute; bottom:calc(var(--size) - 6px); color:#ff6b8a; font-size:14px; line-height:1; pointer-events:none;
+    text-shadow:0 0 2px #fff; opacity:0; animation:heart 1.4s ease-out forwards; }
+  @keyframes heart { 0%{transform:translateY(0) scale(.6);opacity:0} 20%{opacity:1} 100%{transform:translateY(-34px) scale(1.1);opacity:0} }
 
   /* 상태 점: 캐릭터가 작아도 한눈에 (작업=초록, 승인 대기=주황, 에러=빨강, 쉬는 중=회색) */
   .dot { position:absolute; top:6%; right:6%; width:9px; height:9px; border-radius:50%; background:var(--mute);
@@ -148,6 +156,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .buddy *, .buddy .wrap, .dot { animation:none !important; }
+    .heart { animation:none; opacity:1; }
   }
 
   /* ---------- 시트 모드(디자인 미리보기) ---------- */
@@ -328,6 +337,39 @@
     buddy.classList.remove('poked'); void buddy.offsetWidth; buddy.classList.add('poked');
     setTimeout(() => buddy.classList.remove('poked'), 520);
     if (mood !== 'waiting') say(pick('poke') || pick(mood), 2500);
+  }
+
+  // 쓰다듬기: 버튼을 누르지 않은 채 캐릭터 위에서 좌우로 문지르면 (1.2초 안에 방향 전환 4번)
+  const rub = { dir: 0, lastX: null, turns: [] };
+  let petReadyAt = 0;
+  buddy.addEventListener('pointermove', (e) => {
+    if (drag || e.buttons) return;
+    if (rub.lastX === null) { rub.lastX = e.clientX; return; }
+    const dx = e.clientX - rub.lastX;
+    if (Math.abs(dx) < 4) return; // 손떨림 무시
+    rub.lastX = e.clientX;
+    const dir = Math.sign(dx);
+    if (rub.dir && dir !== rub.dir) {
+      const now = performance.now();
+      rub.turns = rub.turns.filter((t) => now - t < 1200);
+      rub.turns.push(now);
+      if (rub.turns.length >= 4 && now >= petReadyAt) { rub.turns = []; petReadyAt = now + 2500; pet(); }
+    }
+    rub.dir = dir;
+  });
+  buddy.addEventListener('pointerleave', () => { rub.dir = 0; rub.lastX = null; rub.turns = []; });
+  let petTimer = null;
+  function pet() {
+    buddy.classList.add('petted');
+    clearTimeout(petTimer); petTimer = setTimeout(() => buddy.classList.remove('petted'), 1800);
+    for (let i = 0; i < 3; i++) {
+      const h = document.createElement('span');
+      h.className = 'heart'; h.textContent = '♥';
+      h.style.left = Math.round(x + SIZE * (0.2 + 0.25 * i)) + 'px';
+      h.style.animationDelay = (i * 0.15) + 's';
+      stage.append(h); setTimeout(() => h.remove(), 1800);
+    }
+    if (mood !== 'waiting') say(pick('pet'), 2500); // 결재 말풍선은 가리지 않음
   }
 
   function render(s) {
