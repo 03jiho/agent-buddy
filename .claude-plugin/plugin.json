@@ -1,6 +1,6 @@
 {
   "name": "agent-buddy",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Claude Code 작업 상태에 반응하는 직장인 풍자 캐릭터. Claude 데스크톱 창 하단에 붙어서 같이 일합니다 (Windows).",
   "author": {
     "name": "03jiho",

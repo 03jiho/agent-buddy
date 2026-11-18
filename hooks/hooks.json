@@ -5,12 +5,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           },
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'tools/autostart.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/tools/autostart.mjs\"",
             "async": true
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -65,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -87,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]
@@ -120,7 +120,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"import(require('url').pathToFileURL(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'hook.mjs')).href)\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook.mjs\"",
             "async": true
           }
         ]

@@ -147,11 +147,29 @@ Electron 없이 보고 싶으면 브라우저로 http://127.0.0.1:47821/?bg=1 �
 - **훅은 등록됐는데 이벤트가 없음**: 훅 command 경로에 역슬래시가 있는지 확인.
 - **오버레이가 안 보임**: Claude 창이 맨 앞에 있어야 보입니다. 다른 창을 클릭하면 숨는 게 정상입니다.
 
-## 프라이버시
+## 이 플러그인이 실행·전송·다운로드하는 것
 
-- 훅은 프롬프트, 도구 입력·출력을 보내지 않습니다. 이벤트명, 도구명, 프로젝트 폴더명 등만 보냅니다.
-- 서버는 127.0.0.1에만 바인딩하고, Host/Origin 검사와 64KB 요청 제한을 합니다.
-- 토큰 수는 훅 입력에 없어서 transcript(`~/.claude` 아래 `.jsonl`만)의 usage 숫자만 읽어 집계합니다.
+숨기는 동작이 없도록 전부 적어둡니다.
+
+**훅 (Claude Code가 실행)**
+- 11개 이벤트(SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Notification, Stop, StopFailure, SubagentStart, SubagentStop, SessionEnd)마다 플러그인 폴더의 `hook.mjs`를 node로 실행합니다.
+- `hook.mjs`는 이벤트 이름, 세션 ID, transcript 파일 경로, 프로젝트 폴더 이름, 도구 이름, 알림 종류만 `http://127.0.0.1:47821`(내 컴퓨터)로 보냅니다. **프롬프트, 도구 입력·출력, 파일 내용은 보내지 않습니다.** 서버가 꺼져 있으면 1.5초 안에 조용히 끝나고, 출력을 남기지 않습니다.
+- SessionStart 때 `tools/autostart.mjs`도 실행합니다. `http://127.0.0.1:47821/health`로 오버레이가 떠 있는지 보고, 없으면 `tools/launch-overlay.mjs`를 백그라운드 프로세스로 띄우고 바로 끝납니다. Windows에서만 동작하고, 환경변수 `AGENT_BUDDY_AUTOSTART=0`으로 끌 수 있습니다.
+
+**첫 실행 때 한 번 다운로드 (`tools/launch-overlay.mjs`)**
+- 플러그인 폴더에서 `npm install`을 실행합니다. npm 레지스트리에서 Electron 패키지를 받고, Electron 설치 과정이 GitHub(`github.com/electron/electron/releases`)에서 Electron 실행 파일(약 100MB)을 받아 플러그인 폴더의 `node_modules` 안에 둡니다.
+- Node 24에서 Electron 압축 해제가 멈추는 버그가 있으면, 받아둔 zip의 SHA-256을 Electron 공식 체크섬과 비교한 뒤 Windows 기본 `tar.exe`로 풉니다.
+- 진행 기록은 `%TEMP%\agent-buddy-launch.log`, 동시 실행 방지용 잠금 파일은 플러그인 폴더의 `.launch.lock`입니다.
+
+**오버레이 (Electron, 플러그인 폴더 안에서 실행)**
+- 로컬 서버(`server.mjs`)를 `127.0.0.1:47821`에서 엽니다. 127.0.0.1에만 바인딩하고, Host/Origin 검사와 64KB 요청 제한을 합니다.
+- 토큰 수를 세려고 `~/.claude` 아래 transcript(`.jsonl`)에서 usage 숫자만 읽습니다. 대화 내용은 읽어서 쓰지 않고, 어디에도 보내지 않습니다.
+- Claude 창을 따라가려고 숨겨진 PowerShell 프로세스가 0.2초마다 Windows API(GetForegroundWindow, DwmGetWindowAttribute 등)로 Claude 창의 위치와 맨 앞 여부를 읽습니다.
+- 캐릭터만 클릭되게 하려고 마우스 커서 위치를 0.04초마다 읽습니다. 키 입력은 읽지 않습니다.
+- 크기 설정은 Electron 사용자 데이터 폴더의 `prefs.json`에, 캐릭터 위치는 오버레이의 localStorage에 저장합니다.
+
+**네트워크**
+- 위의 첫 실행 다운로드(npm 레지스트리, GitHub)를 빼면, 모든 통신은 내 컴퓨터 안(`127.0.0.1`)에서만 일어납니다. 원격 서버로 보내는 데이터, 원격 측정(telemetry)은 없습니다.
 
 ## 테스트
 
