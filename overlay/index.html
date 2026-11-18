@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>agent-buddy</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { --ink:#24424a; --body:#6ec1b4; --belly:#bfe9df; --tie:#e4574c; --paper:#fffdf5; --glow:#9fe3ff;
+    --size:56px; --ok:#3fb97a; --warn:#f2a93b; --bad:#e4574c; --mute:#9aa7ad; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden;
+    font-family: "Pretendard","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif; }
+  body.bg { background:#e9edf0; }
+  #stage { position:fixed; inset:0; pointer-events:none; }
+
+  /* ---------- 캐릭터 ---------- */
+  #stage .buddy { pointer-events:auto; cursor:grab; touch-action:none; }
+  #stage .buddy.drag { cursor:grabbing; }
+  .buddy { position:absolute; bottom:4px; width:var(--size); height:var(--size); }
+  /* 어두운 배경(Claude 다크 테마)에서도 윤곽이 보이도록 옅은 외곽광 */
+  .buddy svg { width:100%; height:100%; overflow:visible; filter:drop-shadow(0 0 1.2px rgba(255,255,255,.45)); }
+  .buddy.poked .wrap { animation:jump .5s ease-out 1 !important; }
+
+  /* 상태 점: 캐릭터가 작아도 한눈에 (작업=초록, 승인 대기=주황, 에러=빨강, 쉬는 중=회색) */
+  .dot { position:absolute; top:6%; right:6%; width:9px; height:9px; border-radius:50%; background:var(--mute);
+    border:1.5px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .buddy:is([data-mood="typing"],[data-mood="writing"],[data-mood="reading"],[data-mood="searching"],[data-mood="delegating"],
+    [data-mood="plugging"],[data-mood="thinking"],[data-mood="celebrate"],[data-mood="celebrate_big"]) .dot { background:var(--ok); }
+  .buddy[data-mood="waiting"] .dot { background:var(--warn); animation:ping 1.2s ease-out infinite; }
+  .buddy:is([data-mood="panic"],[data-mood="exhausted"]) .dot { background:var(--bad); }
+  @keyframes ping { 0%{box-shadow:0 0 0 0 rgba(242,169,59,.8)} 100%{box-shadow:0 0 0 9px rgba(242,169,59,0)} }
+  .buddy .p, .buddy .e, .buddy .m { display:none; }
+  .buddy .wrap { transform-origin:70px 130px; }
+  .buddy .arm { transform-box:view-box; stroke:var(--ink); stroke-width:6; stroke-linecap:round; fill:none; }
+  .buddy .arm-l { transform-origin:36px 86px; }
+  .buddy .arm-r { transform-origin:104px 86px; }
+
+  /* 눈 */
+  .buddy[data-mood="idle"] .e-open, .buddy[data-mood="thinking"] .e-open, .buddy[data-mood="typing"] .e-open,
+  .buddy[data-mood="writing"] .e-open, .buddy[data-mood="reading"] .e-open, .buddy[data-mood="searching"] .e-open,
+  .buddy[data-mood="delegating"] .e-open, .buddy[data-mood="plugging"] .e-open, .buddy[data-mood="waiting"] .e-open { display:inline; }
+  .buddy[data-mood="sleeping"] .e-closed, .buddy[data-mood="exhausted"] .e-closed { display:inline; }
+  .buddy[data-mood="celebrate"] .e-happy, .buddy[data-mood="celebrate_big"] .e-happy { display:inline; }
+  .buddy[data-mood="panic"] .e-wide { display:inline; }
+  /* 입 */
+  .buddy[data-mood="idle"] .m-smile, .buddy[data-mood="delegating"] .m-smile, .buddy[data-mood="reading"] .m-smile { display:inline; }
+  .buddy[data-mood="typing"] .m-flat, .buddy[data-mood="writing"] .m-flat, .buddy[data-mood="searching"] .m-flat,
+  .buddy[data-mood="plugging"] .m-flat, .buddy[data-mood="sleeping"] .m-flat, .buddy[data-mood="exhausted"] .m-flat { display:inline; }
+  .buddy[data-mood="thinking"] .m-o, .buddy[data-mood="waiting"] .m-o { display:inline; }
+  .buddy[data-mood="celebrate"] .m-open, .buddy[data-mood="celebrate_big"] .m-open { display:inline; }
+  .buddy[data-mood="panic"] .m-wavy { display:inline; }
+
+  /* 소품 */
+  .buddy[data-mood="typing"] .p-laptop, .buddy[data-mood="plugging"] .p-laptop { display:inline; }
+  .buddy[data-mood="plugging"] .p-plug { display:inline; }
+  .buddy[data-mood="writing"] .p-pad { display:inline; }
+  .buddy[data-mood="reading"] .p-book, .buddy[data-mood="reading"] .p-glasses { display:inline; }
+  .buddy[data-mood="searching"] .p-lens { display:inline; }
+  .buddy[data-mood="delegating"] .p-minions { display:inline; }
+  .buddy[data-mood="thinking"] .p-dots { display:inline; }
+  .buddy[data-mood="waiting"] .p-sign, .buddy[data-mood="waiting"] .p-bang { display:inline; }
+  .buddy[data-mood="panic"] .p-sweat, .buddy[data-mood="panic"] .p-flush { display:inline; }
+  .buddy[data-mood="exhausted"] .p-flag { display:inline; }
+  .buddy[data-mood="celebrate"] .p-confetti, .buddy[data-mood="celebrate_big"] .p-confetti { display:inline; }
+  .buddy[data-mood="celebrate_big"] .p-confetti2 { display:inline; }
+  .buddy[data-mood="sleeping"] .p-zzz { display:inline; }
+  .buddy[data-mood="idle"] .p-coffee { display:inline; }
+
+  /* 팔 자세 */
+  .buddy[data-mood="typing"] .arm-l, .buddy[data-mood="plugging"] .arm-l { transform:rotate(-55deg); animation:tapL .22s ease-in-out infinite alternate; }
+  .buddy[data-mood="typing"] .arm-r, .buddy[data-mood="plugging"] .arm-r { transform:rotate(55deg);  animation:tapR .22s ease-in-out .11s infinite alternate; }
+  .buddy[data-mood="writing"] .arm-r { transform:rotate(28deg); animation:scribble .35s ease-in-out infinite alternate; }
+  .buddy[data-mood="reading"] .arm-l { transform:rotate(-50deg); }
+  .buddy[data-mood="reading"] .arm-r { transform:rotate(50deg); }
+  .buddy[data-mood="searching"] .arm-r { transform:rotate(-125deg); animation:scan 1.1s ease-in-out infinite alternate; }
+  .buddy[data-mood="waiting"] .arm-l { transform:rotate(-30deg); }
+  .buddy[data-mood="waiting"] .arm-r { transform:rotate(30deg); }
+  .buddy[data-mood="celebrate"] .arm-l, .buddy[data-mood="celebrate_big"] .arm-l { transform:rotate(115deg); animation:cheerL .3s ease-in-out infinite alternate; }
+  .buddy[data-mood="celebrate"] .arm-r, .buddy[data-mood="celebrate_big"] .arm-r { transform:rotate(-115deg); animation:cheerR .3s ease-in-out infinite alternate; }
+  .buddy[data-mood="panic"] .arm-l { transform:rotate(105deg); animation:flailL .18s linear infinite alternate; }
+  .buddy[data-mood="panic"] .arm-r { transform:rotate(-105deg); animation:flailR .18s linear infinite alternate; }
+  .buddy[data-mood="idle"] .arm-r { transform:rotate(-20deg); }
+  .buddy[data-mood="exhausted"] .arm-r { transform:rotate(-100deg); animation:wave 1s ease-in-out infinite alternate; }
+
+  /* 몸 전체 모션 */
+  .buddy[data-mood="idle"] .wrap { animation:bob 2.6s ease-in-out infinite; }
+  .buddy[data-mood="sleeping"] .wrap { animation:sway 3.6s ease-in-out infinite; }
+  .buddy[data-mood="thinking"] .wrap { animation:bob 1.8s ease-in-out infinite; }
+  .buddy[data-mood="typing"] .wrap, .buddy[data-mood="writing"] .wrap, .buddy[data-mood="reading"] .wrap,
+  .buddy[data-mood="searching"] .wrap, .buddy[data-mood="plugging"] .wrap, .buddy[data-mood="delegating"] .wrap { animation:bob 1.2s ease-in-out infinite; }
+  .buddy[data-mood="waiting"] .wrap { animation:hop .9s ease-in-out infinite; }
+  .buddy[data-mood="panic"] .wrap { animation:shake .12s linear infinite; }
+  .buddy[data-mood="exhausted"] .wrap { transform:scaleY(.9); animation:sway 4s ease-in-out infinite; }
+  .buddy[data-mood="celebrate"] .wrap { animation:jump .55s ease-out infinite; }
+  .buddy[data-mood="celebrate_big"] .wrap { animation:jump .42s ease-out infinite; }
+
+  @keyframes bob    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+  @keyframes sway   { 0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)} }
+  @keyframes hop    { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-9px)} }
+  @keyframes shake  { 0%{transform:translateX(-2px)} 100%{transform:translateX(2px)} }
+  @keyframes jump   { 0%{transform:translateY(0) scale(1.04,.94)} 45%{transform:translateY(-22px) scale(.97,1.04)} 100%{transform:translateY(0) scale(1.04,.94)} }
+  @keyframes waddle { 0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg) translateY(-2px)} }
+  @keyframes tapL   { from{transform:rotate(-60deg)} to{transform:rotate(-46deg)} }
+  @keyframes tapR   { from{transform:rotate(60deg)}  to{transform:rotate(46deg)} }
+  @keyframes scribble { from{transform:rotate(22deg)} to{transform:rotate(36deg)} }
+  @keyframes scan   { from{transform:rotate(-135deg)} to{transform:rotate(-105deg)} }
+  @keyframes cheerL { from{transform:rotate(105deg)} to{transform:rotate(128deg)} }
+  @keyframes cheerR { from{transform:rotate(-105deg)} to{transform:rotate(-128deg)} }
+  @keyframes flailL { from{transform:rotate(90deg)} to{transform:rotate(135deg)} }
+  @keyframes flailR { from{transform:rotate(-90deg)} to{transform:rotate(-135deg)} }
+  @keyframes wave   { from{transform:rotate(-90deg)} to{transform:rotate(-115deg)} }
+  @keyframes blink3 { 0%,20%{opacity:.15} 50%{opacity:1} 100%{opacity:.15} }
+  @keyframes rise   { 0%{transform:translate(0,0);opacity:0} 20%{opacity:1} 100%{transform:translate(8px,-26px);opacity:0} }
+  @keyframes fall   { 0%{transform:translateY(-40px) rotate(0);opacity:0} 15%{opacity:1} 100%{transform:translateY(70px) rotate(300deg);opacity:0} }
+  @keyframes drip   { 0%{transform:translateY(0);opacity:1} 100%{transform:translateY(14px);opacity:0} }
+  @keyframes steam  { 0%{transform:translateY(0);opacity:.0} 30%{opacity:.8} 100%{transform:translateY(-10px);opacity:0} }
+  @keyframes minion { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes flicker{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  .p-dots circle { animation:blink3 1.2s infinite; }
+  .p-dots circle:nth-child(2){ animation-delay:.2s } .p-dots circle:nth-child(3){ animation-delay:.4s }
+  .p-zzz text { animation:rise 3s ease-in infinite; font-weight:700; fill:#5b7f8a; }
+  .p-zzz text:nth-child(2){ animation-delay:1s } .p-zzz text:nth-child(3){ animation-delay:2s }
+  .p-confetti rect, .p-confetti2 rect { animation:fall 1.6s linear infinite; }
+  .p-confetti rect:nth-child(2n), .p-confetti2 rect:nth-child(2n) { animation-duration:1.2s; animation-delay:.3s; }
+  .p-confetti rect:nth-child(3n), .p-confetti2 rect:nth-child(3n) { animation-delay:.7s; }
+  .p-sweat path { animation:drip .7s linear infinite; }
+  .p-sweat path:nth-child(2){ animation-delay:.35s }
+  .p-coffee .steam { animation:steam 2s ease-in infinite; }
+  .p-minions g { animation:minion .8s ease-in-out infinite; }
+  .p-minions g:nth-child(2){ animation-delay:.3s }
+  .p-bang text { animation:flicker .6s infinite; }
+  .p-code rect { animation:flicker 1.1s infinite; } .p-code rect:nth-child(2){animation-delay:.3s} .p-code rect:nth-child(3){animation-delay:.6s}
+
+  /* ---------- 말풍선 / HUD ---------- */
+  .bubble { position:absolute; bottom:calc(var(--size) + 10px); max-width:220px; padding:5px 9px; font-size:12px; line-height:1.35; font-weight:600;
+    color:var(--ink); background:#fff; border:1.5px solid var(--ink); border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,.18);
+    opacity:0; transform:translateY(4px); transition:opacity .2s, transform .2s; pointer-events:none; }
+  .bubble.show { opacity:1; transform:none; }
+  .bubble.alert { border-color:var(--warn); box-shadow:0 0 0 2px rgba(242,169,59,.35), 0 2px 6px rgba(0,0,0,.18); }
+  .bubble::after { content:""; position:absolute; left:var(--tail,20px); bottom:-6px; width:8px; height:8px; background:#fff;
+    border-right:1.5px solid; border-bottom:1.5px solid; border-color:inherit; transform:rotate(45deg); }
+  /* HUD: 평소엔 숨김, 캐릭터에 마우스를 올리면 한 줄로 */
+  .hud { position:absolute; bottom:8px; padding:3px 9px; font-size:11px; font-weight:700; color:var(--ink); white-space:nowrap;
+    background:rgba(255,255,255,.94); border:1.5px solid var(--ink); border-radius:999px; box-shadow:0 2px 6px rgba(0,0,0,.18);
+    opacity:0; transition:opacity .15s; pointer-events:none; }
+  body.hover .hud, body.hud-always .hud { opacity:1; }
+  .hud .err { color:#b3261e; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .buddy *, .buddy .wrap, .dot { animation:none !important; }
+  }
+
+  /* ---------- 시트 모드(디자인 미리보기) ---------- */
+  #sheet { display:none; padding:14px; grid-template-columns:repeat(7,1fr); gap:10px; }
+  body.sheet #sheet { display:grid; }
+  body.sheet #stage { display:none; }
+  body.sheet { overflow:auto; background:#eef1f3; }
+  .cell { position:relative; overflow:hidden; height:170px; background:#fff; border:1px solid #cfd8dc; border-radius:10px; }
+  .cell { --size:110px; }
+  .cell .buddy { position:absolute; left:50%; bottom:22px; margin-left:calc(var(--size) / -2); }
+  .cell label { position:absolute; left:0; right:0; bottom:4px; text-align:center; font-size:12px; color:#455a64; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bubble" id="bubble"></div>
+  <div class="hud" id="hud"></div>
+</div>
+<div id="sheet"></div>
+
+<template id="tpl">
+  <div class="buddy" data-mood="idle">
+  <svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <ellipse cx="70" cy="134" rx="36" ry="6" fill="rgba(0,0,0,.14)"/>
+    <g class="wrap">
+      <!-- 몸 -->
+      <path d="M28 124 C20 84 32 34 70 34 C108 34 120 84 112 124 Z" fill="var(--body)" stroke="var(--ink)" stroke-width="3.5" stroke-linejoin="round"/>
+      <ellipse cx="70" cy="100" rx="24" ry="19" fill="var(--belly)" opacity=".85"/>
+      <!-- 팔 (몸 위) -->
+      <path class="arm arm-l" d="M36 86 L22 108"/>
+      <path class="arm arm-r" d="M104 86 L118 108"/>
+      <!-- 발 -->
+      <ellipse cx="52" cy="125" rx="13" ry="6" fill="var(--ink)"/>
+      <ellipse cx="88" cy="125" rx="13" ry="6" fill="var(--ink)"/>
+      <!-- 넥타이 -->
+      <g transform="translate(0,3)">
+      <path d="M64 72 L76 72 L72.5 79 L67.5 79 Z" fill="var(--tie)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M67.5 79 L72.5 79 L77 103 L70 110 L63 103 Z" fill="var(--tie)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+      </g>
+      <!-- 볼 홍조 (패닉) -->
+      <g class="p p-flush"><ellipse cx="46" cy="64" rx="6" ry="3.5" fill="#ff8a80" opacity=".7"/><ellipse cx="94" cy="64" rx="6" ry="3.5" fill="#ff8a80" opacity=".7"/></g>
+      <!-- 눈 -->
+      <g class="e e-open"><circle cx="56" cy="55" r="5" fill="var(--ink)"/><circle cx="84" cy="55" r="5" fill="var(--ink)"/><circle cx="57.5" cy="53" r="1.6" fill="#fff"/><circle cx="85.5" cy="53" r="1.6" fill="#fff"/></g>
+      <g class="e e-closed" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"><path d="M50 56 Q56 61 62 56"/><path d="M78 56 Q84 61 90 56"/></g>
+      <g class="e e-happy" fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-linecap="round"><path d="M50 58 Q56 49 62 58"/><path d="M78 58 Q84 49 90 58"/></g>
+      <g class="e e-wide"><circle cx="56" cy="54" r="8" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><circle cx="84" cy="54" r="8" fill="#fff" stroke="var(--ink)" stroke-width="2.5"/><circle cx="55" cy="55" r="2.6" fill="var(--ink)"/><circle cx="85" cy="55" r="2.6" fill="var(--ink)"/></g>
+      <!-- 입 -->
+      <path class="m m-flat" d="M62 68 L78 68" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+      <path class="m m-smile" d="M60 65 Q70 75 80 65" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+      <path class="m m-open" d="M60 64 Q70 82 80 64 Z" fill="#7a2b32" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+      <path class="m m-wavy" d="M58 69 Q64 63 70 69 T82 69" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+      <circle class="m m-o" cx="70" cy="68" r="3.4" fill="none" stroke="var(--ink)" stroke-width="2.6"/>
+
+      <!-- 소품들 -->
+      <g class="p p-glasses" fill="none" stroke="var(--ink)" stroke-width="2.6"><circle cx="56" cy="55" r="9.5"/><circle cx="84" cy="55" r="9.5"/><path d="M65.5 55 L74.5 55"/></g>
+      <g class="p p-laptop">
+        <rect x="42" y="92" width="56" height="26" rx="3" fill="#2b3a42" stroke="var(--ink)" stroke-width="2.5"/>
+        <g class="p-code" style="display:inline"><rect x="48" y="98" width="26" height="3" rx="1.5" fill="var(--glow)"/><rect x="48" y="104" width="38" height="3" rx="1.5" fill="#8fd4a8"/><rect x="48" y="110" width="18" height="3" rx="1.5" fill="#f2c879"/></g>
+        <rect x="36" y="118" width="68" height="6" rx="3" fill="#9fb3bd" stroke="var(--ink)" stroke-width="2"/>
+      </g>
+      <g class="p p-plug"><path d="M104 108 C120 108 122 90 130 90" fill="none" stroke="var(--ink)" stroke-width="3"/><rect x="128" y="84" width="10" height="12" rx="2" fill="#f2c879" stroke="var(--ink)" stroke-width="2"/><path d="M138 87 L142 87 M138 93 L142 93" stroke="var(--ink)" stroke-width="2"/></g>
+      <g class="p p-pad"><rect x="84" y="84" width="30" height="38" rx="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5"/><path d="M89 94 H108 M89 101 H108 M89 108 H100" stroke="#90a4ae" stroke-width="2"/><path d="M110 78 L118 70 L121 73 L113 81 Z" fill="#f2c879" stroke="var(--ink)" stroke-width="2"/></g>
+      <g class="p p-book"><path d="M70 96 L42 100 L42 122 L70 118 Z" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/><path d="M70 96 L98 100 L98 122 L70 118 Z" fill="#fff" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/><path d="M48 106 L64 104 M48 112 L64 110 M76 104 L92 106 M76 110 L92 112" stroke="#90a4ae" stroke-width="2"/></g>
+      <g class="p p-lens"><circle cx="112" cy="70" r="12" fill="rgba(159,227,255,.35)" stroke="var(--ink)" stroke-width="3.2"/><path d="M121 79 L132 92" stroke="var(--ink)" stroke-width="4.5" stroke-linecap="round"/></g>
+      <g class="p p-minions">
+        <g><ellipse cx="-4" cy="120" rx="10" ry="12" fill="#f2c879" stroke="var(--ink)" stroke-width="2.4"/><circle cx="-8" cy="116" r="1.8" fill="var(--ink)"/><circle cx="0" cy="116" r="1.8" fill="var(--ink)"/></g>
+        <g><ellipse cx="148" cy="120" rx="10" ry="12" fill="#f2a6b8" stroke="var(--ink)" stroke-width="2.4"/><circle cx="144" cy="116" r="1.8" fill="var(--ink)"/><circle cx="152" cy="116" r="1.8" fill="var(--ink)"/></g>
+      </g>
+      <g class="p p-dots" fill="var(--ink)"><circle cx="52" cy="22" r="4"/><circle cx="70" cy="18" r="4"/><circle cx="88" cy="22" r="4"/></g>
+      <g class="p p-sign"><rect x="34" y="82" width="72" height="30" rx="4" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.6"/><text x="70" y="102" text-anchor="middle" font-size="14" font-weight="800" fill="var(--tie)">결재 대기</text></g>
+      <g class="p p-bang"><text x="110" y="40" font-size="30" font-weight="900" fill="var(--tie)">!</text></g>
+      <g class="p p-sweat"><path d="M34 44 q-5 8 0 11 q5 -3 0 -11z" fill="#7fd0f5" stroke="var(--ink)" stroke-width="1.6"/><path d="M106 40 q-5 8 0 11 q5 -3 0 -11z" fill="#7fd0f5" stroke="var(--ink)" stroke-width="1.6"/></g>
+      <g class="p p-flag"><path d="M118 112 L118 56" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/><path d="M118 58 L142 64 L118 74 Z" fill="#fff" stroke="var(--ink)" stroke-width="2.4" stroke-linejoin="round"/></g>
+      <g class="p p-zzz"><text x="96" y="40" font-size="16">z</text><text x="104" y="30" font-size="20">z</text><text x="112" y="18" font-size="24">Z</text></g>
+      <g class="p p-coffee"><path d="M110 98 h16 v14 a8 8 0 0 1 -8 8 h0 a8 8 0 0 1 -8 -8 z" fill="#fff" stroke="var(--ink)" stroke-width="2.4"/><path d="M126 102 h4 a4 4 0 0 1 0 8 h-4" fill="none" stroke="var(--ink)" stroke-width="2.4"/><path class="steam" d="M114 92 q-3 -5 0 -9 M120 92 q-3 -5 0 -9" fill="none" stroke="#90a4ae" stroke-width="2" stroke-linecap="round"/></g>
+      <g class="p p-confetti"><rect x="20" y="20" width="6" height="9" fill="#f2c879"/><rect x="42" y="6" width="6" height="9" fill="#e4574c"/><rect x="64" y="14" width="6" height="9" fill="#7fd0f5"/><rect x="86" y="4" width="6" height="9" fill="#8fd4a8"/><rect x="108" y="16" width="6" height="9" fill="#f2a6b8"/><rect x="128" y="8" width="6" height="9" fill="#f2c879"/></g>
+      <g class="p p-confetti2"><rect x="10" y="30" width="5" height="8" fill="#8fd4a8"/><rect x="32" y="12" width="5" height="8" fill="#7fd0f5"/><rect x="54" y="2" width="5" height="8" fill="#f2a6b8"/><rect x="76" y="24" width="5" height="8" fill="#f2c879"/><rect x="98" y="8" width="5" height="8" fill="#e4574c"/><rect x="120" y="28" width="5" height="8" fill="#7fd0f5"/></g>
+    </g>
+  </svg>
+  </div>
+</template>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const MOODS = ['idle','sleeping','thinking','typing','writing','reading','searching','delegating','plugging','waiting','panic','exhausted','celebrate','celebrate_big'];
+  const LABEL = { idle:'대기', sleeping:'졸음', thinking:'생각', typing:'터미널', writing:'파일 수정', reading:'읽기', searching:'검색',
+    delegating:'서브에이전트', plugging:'MCP 연동', waiting:'승인 대기', panic:'에러', exhausted:'한도 도달', celebrate:'완료', celebrate_big:'대형 작업 완료' };
+  // 말은 꼭 필요할 때만 (Clippy 교훈): 승인 대기, 에러, 한도, 완료. 작업 중엔 동작으로만 표현.
+  const SPEAK = new Set(['waiting','panic','exhausted','celebrate','celebrate_big']);
+  const SIZES = { s:56, m:72, l:96 };
+  const SIZE = SIZES[params.get('size')] || SIZES.s;
+  document.documentElement.style.setProperty('--size', SIZE + 'px');
+  if (params.has('bg')) document.body.classList.add('bg');
+  if (params.get('hud') === '1') document.body.classList.add('hud-always');
+
+  let LINES = {};
+  const linesReady = fetch('/lines.ko.json').then(r => r.json()).then(j => { LINES = j; }).catch(() => {});
+  const make = () => document.getElementById('tpl').content.firstElementChild.cloneNode(true);
+  const pick = (mood) => { const a = LINES[mood]; return a && a.length ? a[Math.floor(Math.random() * a.length)] : ''; };
+
+  /* ---------- 시트 모드: 모든 상태 미리보기 ---------- */
+  if (params.has('sheet')) {
+    document.body.classList.add('sheet');
+    const sheet = document.getElementById('sheet');
+    for (const m of MOODS) {
+      const cell = document.createElement('div'); cell.className = 'cell';
+      const b = make(); b.dataset.mood = m;
+      const l = document.createElement('label'); l.textContent = `${m} · ${LABEL[m]}`;
+      cell.append(b, l); sheet.append(cell);
+    }
+    return;
+  }
+
+  /* ---------- 일반 모드 ---------- */
+  const stage = document.getElementById('stage');
+  const buddy = make(); stage.append(buddy);
+  const dot = document.createElement('span'); dot.className = 'dot'; buddy.append(dot);
+  const bubble = document.getElementById('bubble');
+  const hud = document.getElementById('hud');
+  const api = window.buddy; // Electron preload (브라우저 미리보기에선 없음)
+
+  let mood = null, pulse = -1, bubbleTimer = null;
+  const fmt = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(n);
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+                  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+  // 위치: 사용자가 끌어다 놓은 곳에 머문다 (돌아다니지 않음). 비율로 저장해서 창 크기가 바뀌어도 유지.
+  const saved = store.get('buddy-x');
+  let ratio = saved === null ? 1 : Number(saved); // 기본: 오른쪽 끝
+  if (!(ratio >= 0 && ratio <= 1)) ratio = 1;
+  let x = 0;
+  function layout() {
+    x = Math.round(8 + ratio * Math.max(0, innerWidth - SIZE - 16));
+    buddy.style.left = x + 'px';
+    bubble.style.left = '0px'; // 오른쪽 끝에서 폭이 줄어든 채로 재지 않도록 왼쪽에서 측정
+    const bw = bubble.offsetWidth || 160;
+    const bl = Math.max(6, Math.min(innerWidth - bw - 6, x + SIZE / 2 - 24));
+    bubble.style.left = bl + 'px';
+    bubble.style.setProperty('--tail', Math.max(10, Math.min(bw - 20, x + SIZE / 2 - bl - 4)) + 'px');
+    const hw = hud.offsetWidth;
+    hud.style.left = (x - hw - 8 >= 6 ? x - hw - 8 : Math.min(innerWidth - hw - 6, x + SIZE + 8)) + 'px';
+  }
+  addEventListener('resize', layout);
+
+  function say(text, ms = 4500, alert = false) {
+    if (!text) return;
+    bubble.textContent = text; bubble.classList.toggle('alert', alert); bubble.classList.add('show'); layout();
+    clearTimeout(bubbleTimer);
+    if (ms) bubbleTimer = setTimeout(() => bubble.classList.remove('show'), ms); // ms=0: 상태가 바뀔 때까지 유지
+  }
+  const hush = () => { clearTimeout(bubbleTimer); bubble.classList.remove('show'); };
+
+  // 마우스: 올리면 HUD, 끌면 이동, 클릭하면 반응. 나머지 영역은 클릭 통과.
+  let drag = null;
+  const setHover = (on) => { document.body.classList.toggle('hover', on); api?.setClickable(on); if (on) layout(); };
+  buddy.addEventListener('pointerenter', () => setHover(true));
+  buddy.addEventListener('pointerleave', () => { if (!drag) setHover(false); });
+  buddy.addEventListener('pointerdown', (e) => {
+    drag = { sx: e.clientX, off: e.clientX - x, moved: false };
+    buddy.setPointerCapture(e.pointerId); buddy.classList.add('drag');
+  });
+  buddy.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.sx) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    ratio = Math.max(0, Math.min(1, (e.clientX - drag.off - 8) / Math.max(1, innerWidth - SIZE - 16)));
+    layout();
+  });
+  buddy.addEventListener('pointerup', (e) => {
+    const d = drag; drag = null; buddy.classList.remove('drag');
+    if (d?.moved) store.set('buddy-x', ratio.toFixed(4));
+    else poke();
+    const r = buddy.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) setHover(false);
+  });
+  function poke() {
+    buddy.classList.remove('poked'); void buddy.offsetWidth; buddy.classList.add('poked');
+    setTimeout(() => buddy.classList.remove('poked'), 520);
+    if (mood !== 'waiting') say(pick('poke') || pick(mood), 2500);
+  }
+
+  function render(s) {
+    if (!s) return;
+    if (s.mood !== mood) {
+      mood = s.mood; buddy.dataset.mood = mood;
+      if (SPEAK.has(mood)) say(pick(mood), mood === 'waiting' ? 0 : 5000, mood === 'waiting');
+      else hush();
+    } else if (s.pulse !== pulse && (mood === 'celebrate' || mood === 'celebrate_big')) {
+      say(pick(mood), 5000);
+    }
+    pulse = s.pulse;
+    const t = s.tokens || {};
+    hud.textContent = '';
+    hud.append([s.project, '도구 ' + (s.toolCalls || 0)].filter(Boolean).join(' · ') + ' · ');
+    if (s.failures) { const e = document.createElement('span'); e.className = 'err'; e.textContent = '실패 ' + s.failures; hud.append(e, ' · '); }
+    hud.append('토큰 ' + fmt(t.total || 0) + ' · 커피 ' + (s.coffee || 0) + '잔');
+    layout();
+  }
+  layout();
+
+  /* ---------- 데모 / 고정 상태 ---------- */
+  if (params.has('mood')) {
+    linesReady.finally(() => render({ mood: params.get('mood'), toolCalls: 12, failures: 1, tokens: { total: 48200 }, coffee: 3, project: 'my-app' }));
+    return;
+  }
+  if (params.has('demo')) {
+    const script = [['idle',3000],['thinking',2600],['reading',3000],['searching',2800],['writing',3200],['typing',3400],['panic',2600],['typing',2600],
+                    ['delegating',3000],['waiting',4000],['plugging',2800],['celebrate_big',4200],['idle',3000],['sleeping',4200],['exhausted',3600]];
+    let i = 0, tools = 0, fails = 0, tok = 1200;
+    const step = () => {
+      const [m, ms] = script[i % script.length]; i++;
+      if (['typing','writing','reading','searching','delegating','plugging'].includes(m)) tools += 1 + Math.floor(Math.random()*2);
+      if (m === 'panic') fails++;
+      tok += 1800 + Math.floor(Math.random()*4200);
+      render({ mood: m, toolCalls: tools, failures: fails, tokens: { total: tok }, coffee: Math.floor(tok/9000), project: 'demo', pulse: i });
+      setTimeout(step, ms);
+    };
+    linesReady.finally(step);
+    addEventListener('keydown', (e) => { const n = Number(e.key); if (n >= 1 && n <= MOODS.length) render({ mood: MOODS[n-1], toolCalls: tools, failures: fails, tokens:{total:tok}, pulse: ++i }); });
+    return;
+  }
+
+  /* ---------- 실제 연결 (SSE) ---------- */
+  let lastMsg = Date.now();
+  const es = new EventSource('/stream');
+  es.onmessage = (e) => { lastMsg = Date.now(); try { render(JSON.parse(e.data)); } catch {} };
+  es.onerror = () => { setTimeout(() => { if (Date.now() - lastMsg > 4000 && mood !== 'sleeping') { mood = 'offline'; buddy.dataset.mood = 'sleeping'; say(pick('offline'), 6000); } }, 4200); };
+})();
+</script>
+</body>
+</html>

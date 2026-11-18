@@ -1,0 +1,21 @@
+{
+  "name": "agent-buddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude Code 에이전트가 일하는 동안 화면 하단에서 같이 일하는 캐릭터 (프로토타입)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test",
+    "settings": "node tools/print-settings.mjs",
+    "icon": "node tools/make-tray-icon.mjs",
+    "electron": "electron electron/main.cjs",
+    "overlay": "electron electron/main.cjs"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
