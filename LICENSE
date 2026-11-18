@@ -1,0 +1,49 @@
+Agent Buddy uses two licenses: one for the code and one for the character artwork.
+
+================================================================================
+1. Code — MIT License
+================================================================================
+
+Applies to all source code in this repository (JavaScript, HTML/CSS structure,
+scripts, configuration), except the character artwork listed in section 2.
+
+Copyright (c) 2026 03jiho
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+2. Character artwork — CC BY-NC-ND 4.0
+================================================================================
+
+Applies to the Agent Buddy character design and its artwork:
+
+  - the SVG character drawing inside <template id="tpl"> in overlay/index.html
+    (body, face, expressions, props)
+  - images in assets/ (sheet.jpg, tray.png)
+
+Copyright (c) 2026 03jiho
+
+Licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives
+4.0 International License: https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+In short: you may share the artwork unmodified, with credit, for
+non-commercial purposes, including running and redistributing this software.
+Commercial use or modified versions of the character require permission
+from the copyright holder. You are free to replace the character with your
+own artwork in forks; the code stays MIT.

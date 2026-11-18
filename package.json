@@ -2,6 +2,7 @@
   "name": "agent-buddy",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT AND CC-BY-NC-ND-4.0",
   "description": "Claude Code 에이전트가 일하는 동안 화면 하단에서 같이 일하는 캐릭터 (프로토타입)",
   "type": "module",
   "engines": {

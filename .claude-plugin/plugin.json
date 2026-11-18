@@ -8,5 +8,6 @@
   },
   "homepage": "https://github.com/03jiho/agent-buddy",
   "repository": "https://github.com/03jiho/agent-buddy",
+  "license": "MIT AND CC-BY-NC-ND-4.0",
   "keywords": ["companion", "desktop-pet", "overlay", "hooks"]
 }

@@ -172,3 +172,14 @@ npm test
 
 - Claude 창 추적은 Windows 전용입니다. PowerShell로 0.2초마다 창 위치를 읽어서, 창을 끌 때 약간 늦게 따라옵니다.
 - 프로토타입입니다.
+
+## 후원
+
+Agent Buddy가 마음에 들었다면 동료에게 커피 한 잔 사주세요. 저장소 위쪽의 **Sponsor** 버튼으로 후원할 수 있어요.
+
+## 라이선스
+
+- **코드**: [MIT](LICENSE). 자유롭게 쓰고, 고치고, 배포할 수 있어요.
+- **캐릭터 그림** (`overlay/index.html`의 캐릭터 SVG, `assets/`의 이미지): [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/). 출처를 밝히고 비상업적으로, 고치지 않은 채 공유할 수 있어요. 이 앱을 실행하고 배포하는 건 괜찮아요. 상업적 이용이나 캐릭터 변형은 따로 허락이 필요해요. 포크에서 캐릭터를 직접 그린 것으로 바꾸는 건 자유예요.
+
+Agent Buddy는 개인 프로젝트이며 Anthropic과 관련이 없습니다. Claude는 Anthropic의 상표입니다.
